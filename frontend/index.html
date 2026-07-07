@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8"><title>ระบบบันทึกข้อมูลหนังสือห้องสมุด</title>
+</head>
+<body style="font-family: sans-serif; padding: 20px;">
+    <div style="background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <h2>ผู้จัดทำ: นายพัชรพล ไวโสภา</h2>
+        <p><strong>รหัสนักศึกษา:</strong> 68319010027</p>
+    </div>
+    
+    <form id="bookForm" style="margin-bottom: 20px;">
+        <input type="text" id="isbn" placeholder="ISBN" required>
+        <input type="text" id="title" placeholder="ชื่อหนังสือ" required>
+        <input type="text" id="author" placeholder="ผู้แต่ง" required>
+        <input type="text" id="category" placeholder="หมวดหมู่" required>
+        <input type="number" id="year" placeholder="ปีที่พิมพ์" required>
+        <select id="status">
+            <option value="พร้อมให้ยืม">พร้อมให้ยืม</option>
+            <option value="ถูกยืม">ถูกยืม</option>
+            <option value="ชำรุด">ชำรุด</option>
+        </select>
+        <button type="submit" style="background: green; color: white; border: none; padding: 5px 10px;">บันทึกข้อมูล</button>
+    </form>
+
+    <table border="1" style="width:100%; border-collapse: collapse; text-align: left;">
+        <thead style="background: #f8f9fa;">
+            <tr><th>ISBN</th><th>ชื่อ</th><th>ผู้แต่ง</th><th>หมวดหมู่</th><th>ปี</th><th>สถานะ</th><th>จัดการ</th></tr>
+        </thead>
+        <tbody id="bookList"></tbody>
+    </table>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api/books';
+        const fetchBooks = async () => {
+            const res = await fetch(API_URL);
+            const books = await res.json();
+            document.getElementById('bookList').innerHTML = books.map(b => `
+                <tr>
+                    <td>${b.isbn}</td><td>${b.title}</td><td>${b.author}</td>
+                    <td>${b.category}</td><td>${b.year}</td><td>${b.status}</td>
+                    <td><button onclick="deleteBook('${b.isbn}')" style="background: red; color: white; border: none;">ลบ</button></td>
+                </tr>
+            `).join('');
+        };
+        
+        document.getElementById('bookForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                isbn: document.getElementById('isbn').value,
+                title: document.getElementById('title').value,
+                author: document.getElementById('author').value,
+                category: document.getElementById('category').value,
+                year: parseInt(document.getElementById('year').value),
+                status: document.getElementById('status').value
+            };
+            await fetch(API_URL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            fetchBooks();
+        });
+
+        const deleteBook = async (isbn) => {
+            await fetch(`${API_URL}/${isbn}`, { method: 'DELETE' });
+            fetchBooks();
+        };
+        fetchBooks();
+    </script>
+</body>
+</html>
