@@ -1,0 +1,7 @@
+﻿node_modules
+.git
+.gitignore
+Dockerfile
+README.md
+index_enhanced.html
+*.log
