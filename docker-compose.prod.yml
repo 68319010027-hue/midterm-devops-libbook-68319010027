@@ -10,7 +10,7 @@ services:
       - "5432:5432"
 
   backend:
-    image: <patcharapon07>/libbook-api:v1.0.0
+    image: patcharapon07/libbook-api:v1.0.0
     ports:
       - "3000:3000"
     environment:
@@ -23,6 +23,6 @@ services:
       - db
 
   frontend:
-    image: <patcharapon07>/libbook-web:v1.0.0
+    image: patcharapon07/libbook-web:v1.0.0
     ports:
       - "8080:80"
