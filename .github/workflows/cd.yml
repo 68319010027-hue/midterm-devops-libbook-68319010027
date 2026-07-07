@@ -1,0 +1,25 @@
+name: CD - Production Deployment
+
+on:
+  push:
+    branches: [ main ] # สั่งรันอัตโนมัติเมื่อมีการ Merge งานเข้ากิ่ง main สำเร็จ
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Runtime Environment Secrets
+        run: |
+          echo "Initializing production .env mapping configuration..."
+          # ดึงค่า Secrets ความลับเรื่องพอร์ตที่ตั้งไว้ใน GitHub มาเขียนลง .env เงียบๆ บนเซิร์ฟเวอร์
+          echo "BACKEND_PORT=${{ secrets.BACKEND_PORT }}" >> .env
+          echo "FRONTEND_PORT=${{ secrets.FRONTEND_PORT }}" >> .env
+
+      - name: Boot Docker Production Stack
+        run: |
+          echo "Launching Docker containers via stack compose..."
+          # คำสั่งสำหรับดึงอิมเมจจาก Docker Hub ล่าสุดและสั่งรันระบบขึ้นมาใช้งานจริง
+          docker compose -f docker-compose.prod.yml up -d
