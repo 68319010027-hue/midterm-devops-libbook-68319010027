@@ -22,11 +22,11 @@
         </select>
 
         <div class="actions">
-          <button v-if="isEditing" type="button" class="btn btn-secondary" @click="resetForm">ยกเลิก</button>
-          <button type="submit" class="btn btn-primary">{{ isEditing ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล' }}</button>
+          <button v-if="isEditing" type="button" class="btn btn-secondary" @click="resetForm" :disabled="loading">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary" :disabled="loading">{{ loading ? 'กำลังประมวลผล...' : (isEditing ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล') }}</button>
         </div>
       </form>
-      <p class="message" v-if="message">{{ message }}</p>
+      <p class="message" v-if="message" :class="messageType">{{ message }}</p>
     </section>
 
     <section class="card table-card">
@@ -76,23 +76,44 @@ export default {
     const isEditing = ref(false);
     const editingIsbn = ref('');
     const message = ref('');
+    const messageType = ref('info');
+    const loading = ref(false);
     const form = ref({ isbn: '', title: '', author: '', category: '', year: '', status: 'พร้อมให้ยืม' });
     const API_URL = '/api/books';
 
-    const showMessage = (text, timeout = 3000) => {
+    const showMessage = (text, type = 'info', timeout = 3500) => {
       message.value = text;
+      messageType.value = type;
       setTimeout(() => {
-        if (message.value === text) message.value = '';
+        if (message.value === text) {
+          message.value = '';
+          messageType.value = 'info';
+        }
       }, timeout);
     };
 
+    const parseResponse = async (res) => {
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error(text || 'ไม่สามารถประมวลผลคำตอบจากเซิร์ฟเวอร์ได้');
+      }
+    };
+
     const fetchBooks = async () => {
+      loading.value = true;
       try {
         const res = await fetch(API_URL);
-        if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลได้');
-        books.value = await res.json();
+        if (!res.ok) {
+          const err = await parseResponse(res).catch(() => null);
+          throw new Error(err?.error || 'ไม่สามารถดึงข้อมูลได้');
+        }
+        books.value = await parseResponse(res);
       } catch (err) {
-        showMessage(err.message);
+        showMessage(err.message, 'error');
+      } finally {
+        loading.value = false;
       }
     };
 
@@ -104,33 +125,38 @@ export default {
 
     const submitForm = async () => {
       if (!form.value.isbn || !form.value.title || !form.value.author) {
-        showMessage('กรุณากรอก ISBN ชื่อหนังสือ และผู้แต่งให้ครบ');
+        showMessage('กรุณากรอก ISBN ชื่อหนังสือ และผู้แต่งให้ครบ', 'error');
         return;
       }
 
+      loading.value = true;
       try {
         const method = isEditing.value ? 'PUT' : 'POST';
         const url = isEditing.value ? `${API_URL}/${editingIsbn.value}` : API_URL;
-        const body = isEditing.value ? { title: form.value.title, author: form.value.author, category: form.value.category, year: Number(form.value.year), status: form.value.status } : {
-          isbn: form.value.isbn,
-          title: form.value.title,
-          author: form.value.author,
-          category: form.value.category,
-          year: Number(form.value.year),
-          status: form.value.status,
-        };
+        const body = isEditing.value
+          ? { title: form.value.title, author: form.value.author, category: form.value.category, year: Number(form.value.year), status: form.value.status }
+          : {
+              isbn: form.value.isbn,
+              title: form.value.title,
+              author: form.value.author,
+              category: form.value.category,
+              year: Number(form.value.year),
+              status: form.value.status,
+            };
 
         const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (!res.ok) {
-          const err = await res.json().catch(() => null);
+          const err = await parseResponse(res).catch(() => null);
           throw new Error(err?.error || 'เกิดข้อผิดพลาดขณะบันทึก');
         }
 
-        showMessage(isEditing.value ? 'แก้ไขเรียบร้อย' : 'บันทึกเรียบร้อย');
         resetForm();
-        fetchBooks();
+        await fetchBooks();
+        showMessage(isEditing.value ? 'แก้ไขเรียบร้อย' : 'บันทึกเรียบร้อย', 'success');
       } catch (err) {
-        showMessage(err.message);
+        showMessage(err.message, 'error');
+      } finally {
+        loading.value = false;
       }
     };
 
@@ -149,17 +175,20 @@ export default {
     const deleteBook = async (isbn) => {
       try {
         const res = await fetch(`${API_URL}/${isbn}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('การลบล้มเหลว');
-        showMessage('ลบเรียบร้อย');
+        if (!res.ok) {
+          const err = await parseResponse(res).catch(() => null);
+          throw new Error(err?.error || 'การลบล้มเหลว');
+        }
+        showMessage('ลบเรียบร้อย', 'success');
         fetchBooks();
       } catch (err) {
-        showMessage(err.message);
+        showMessage(err.message, 'error');
       }
     };
 
     onMounted(fetchBooks);
 
-    return { books, form, isEditing, message, submitForm, startEdit, confirmDelete, resetForm };
+    return { books, form, isEditing, message, messageType, loading, submitForm, startEdit, confirmDelete, resetForm };
   },
 };
 </script>
@@ -185,4 +214,15 @@ thead th { background: #f8fafc; }
 .empty-state { text-align: center; color: #6b7280; padding: 16px 0; }
 @media (max-width: 900px) { .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
+
+.message {
+  grid-column: span 6;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.message.info { background: #e0f2fe; color: #0c4a6e; }
+.message.success { background: #dcfce7; color: #166534; }
+.message.error { background: #fee2e2; color: #991b1b; }
 </style>
