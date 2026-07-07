@@ -56,45 +56,68 @@ const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, ne
 
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
 
+// 1. ดึงข้อมูลหนังสือทั้งหมด (รวมฟิลด์ version)
 app.get('/api/books', asyncHandler(async (req, res) => {
   const result = await pool.query('SELECT * FROM books');
   res.json(result.rows);
 }));
 
+// 2. ดึงข้อมูลหนังสือตาม ISBN
 app.get('/api/books/:isbn', asyncHandler(async (req, res) => {
   const result = await pool.query('SELECT * FROM books WHERE isbn = $1', [req.params.isbn]);
   if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
   res.json(result.rows[0]);
 }));
 
+// 3. เพิ่มหนังสือเล่มใหม่ (กำหนดค่าเริ่มต้นของ version เป็น '1.0' หากไม่ได้ระบุมา)
 app.post('/api/books', asyncHandler(async (req, res) => {
   const { isbn, title, author, category, year, status, version } = req.body;
   if (!isbn || !title || !author || !category || !year) {
     return res.status(400).json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
   }
+  
+  // ตรวจสอบค่าเวอร์ชัน ถ้าว่างให้เป็น '1.0'
+  const finalVersion = version && version.trim() !== '' ? version.trim() : '1.0';
+
   const result = await pool.query(
     'INSERT INTO books (isbn, title, author, category, year, status, version) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-    [isbn, title, author, category, year, status || 'พร้อมให้ยืม', version || '1.0']
+    [isbn, title, author, category, year, status || 'พร้อมให้ยืม', finalVersion]
   );
   res.status(201).json(result.rows[0]);
 }));
 
+// 4. แก้ไขข้อมูลหนังสือ (คงค่าเวอร์ชันเดิมใน DB ไว้หากในฟอร์มไม่มีการปรับเปลี่ยน)
 app.put('/api/books/:isbn', asyncHandler(async (req, res) => {
   const { title, author, category, year, status, version } = req.body;
+  
+  if (!title || !author || !category || !year) {
+    return res.status(400).json({ error: 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน' });
+  }
+
+  // ดึงข้อมูลเวอร์ชันเดิมจากฐานข้อมูลมาก่อนเพื่อป้องกันการถูกรีเซ็ต
+  const currentBook = await pool.query('SELECT version FROM books WHERE isbn = $1', [req.params.isbn]);
+  if (currentBook.rows.length === 0) return res.status(404).json({ error: 'ไม่พบหนังสือที่ต้องการแก้ไข' });
+
+  // จัดการเวอร์ชัน: ถ้าผู้ใช้พิมพ์มาใหม่ให้ใช้ตามนั้น / ถ้าช่องว่างให้คงเวอร์ชันเดิมเอาไว้
+  const oldVersion = currentBook.rows[0].version || '1.0';
+  const finalVersion = version && version.trim() !== '' ? version.trim() : oldVersion;
+
   const result = await pool.query(
     'UPDATE books SET title=$1, author=$2, category=$3, year=$4, status=$5, version=$6 WHERE isbn=$7 RETURNING *',
-    [title, author, category, year, status || 'พร้อมให้ยืม', version || '1.0', req.params.isbn]
+    [title, author, category, year, status || 'พร้อมให้ยืม', finalVersion, req.params.isbn]
   );
-  if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+  
   res.json(result.rows[0]);
 }));
 
+// 5. ลบหนังสือ
 app.delete('/api/books/:isbn', asyncHandler(async (req, res) => {
   const result = await pool.query('DELETE FROM books WHERE isbn = $1 RETURNING *', [req.params.isbn]);
   if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
   res.json({ message: 'Deleted' });
 }));
 
+// Error Handling Middleware
 app.use((err, req, res, next) => {
   console.error(err);
   if (err.code === '23505') {
@@ -107,4 +130,5 @@ app.use((err, req, res, next) => {
 if (process.env.NODE_ENV !== 'test') {
   startServer();
 }
+
 module.exports = app;
