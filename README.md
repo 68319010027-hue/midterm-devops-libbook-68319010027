@@ -1,0 +1,13 @@
+# ระบบบันทึกข้อมูลหนังสือห้องสมุด (libbook)
+
+## 👤 ข้อมูลผู้จัดทำประเมินผล
+- **ชื่อ-นามสกุล:** พัชรพล ไวโสภา
+- **รหัสนักศึกษา:** 68319010027
+
+## 🌐 แหล่งรวมสารสนเทศจัดเก็บระบบ (Docker Hub links)
+- **Backend API:** [https://hub.docker.com/r/patcharapon07/libbook-api](https://hub.docker.com/r/patcharapon07/libbook-api)
+- **Frontend Web:** [https://hub.docker.com/r/patcharapon07/libbook-web](https://hub.docker.com/r/patcharapon07/libbook-web)
+
+## 🚀 วิธีการดึงข้อมูลเพื่อเปิดรันระบบใช้งานจริง (Production Manual)
+สามารถดึงระบบขึ้นรันได้ง่ายๆ ผ่านคำสั่งสั้นๆ เพียงบรรทัดเดียว:
+`docker compose -f docker-compose.prod.yml up -d`
