@@ -14,6 +14,7 @@
         <input v-model="form.title" type="text" placeholder="ชื่อหนังสือ" required />
         <input v-model="form.author" type="text" placeholder="ผู้แต่ง" required />
         <input v-model="form.category" type="text" placeholder="หมวดหมู่" required />
+        <input v-model="form.version" type="text" placeholder="เวอร์ชัน" />
         <input v-model.number="form.year" type="number" placeholder="ปีที่พิมพ์" required />
         <select v-model="form.status">
           <option value="พร้อมให้ยืม">พร้อมให้ยืม</option>
@@ -38,6 +39,7 @@
               <th>ชื่อหนังสือ</th>
               <th>ผู้แต่ง</th>
               <th>หมวดหมู่</th>
+              <th>เวอร์ชัน</th>
               <th>ปี</th>
               <th>สถานะ</th>
               <th>จัดการ</th>
@@ -49,6 +51,7 @@
               <td>{{ book.title }}</td>
               <td>{{ book.author }}</td>
               <td>{{ book.category }}</td>
+              <td>{{ book.version || '-' }}</td>
               <td>{{ book.year }}</td>
               <td>{{ book.status }}</td>
               <td class="actions-cell">
@@ -57,7 +60,7 @@
               </td>
             </tr>
             <tr v-if="books.length === 0">
-              <td colspan="7" class="empty-state">ไม่มีข้อมูลหนังสือ</td>
+              <td colspan="8" class="empty-state">ไม่มีข้อมูลหนังสือ</td>
             </tr>
           </tbody>
         </table>
@@ -78,7 +81,7 @@ export default {
     const message = ref('');
     const messageType = ref('info');
     const loading = ref(false);
-    const form = ref({ isbn: '', title: '', author: '', category: '', year: '', status: 'พร้อมให้ยืม' });
+    const form = ref({ isbn: '', title: '', author: '', category: '', version: '', year: '', status: 'พร้อมให้ยืม' });
     const API_URL = '/api/books';
 
     const showMessage = (text, type = 'info', timeout = 3500) => {
@@ -118,7 +121,7 @@ export default {
     };
 
     const resetForm = () => {
-      form.value = { isbn: '', title: '', author: '', category: '', year: '', status: 'พร้อมให้ยืม' };
+      form.value = { isbn: '', title: '', author: '', category: '', version: '', year: '', status: 'พร้อมให้ยืม' };
       isEditing.value = false;
       editingIsbn.value = '';
     };
@@ -134,12 +137,13 @@ export default {
         const method = isEditing.value ? 'PUT' : 'POST';
         const url = isEditing.value ? `${API_URL}/${editingIsbn.value}` : API_URL;
         const body = isEditing.value
-          ? { title: form.value.title, author: form.value.author, category: form.value.category, year: Number(form.value.year), status: form.value.status }
+          ? { title: form.value.title, author: form.value.author, category: form.value.category, version: form.value.version, year: Number(form.value.year), status: form.value.status }
           : {
               isbn: form.value.isbn,
               title: form.value.title,
               author: form.value.author,
               category: form.value.category,
+              version: form.value.version,
               year: Number(form.value.year),
               status: form.value.status,
             };
@@ -163,7 +167,7 @@ export default {
     const startEdit = (book) => {
       isEditing.value = true;
       editingIsbn.value = book.isbn;
-      form.value = { isbn: book.isbn, title: book.title, author: book.author, category: book.category, year: book.year, status: book.status };
+      form.value = { isbn: book.isbn, title: book.title, author: book.author, category: book.category, version: book.version || '', year: book.year, status: book.status };
     };
 
     const confirmDelete = (isbn) => {

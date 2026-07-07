@@ -25,13 +25,15 @@ const initDb = async () => {
         author VARCHAR(255) NOT NULL,
         category VARCHAR(100) NOT NULL,
         year INT NOT NULL,
-        status VARCHAR(50) DEFAULT 'พร้อมให้ยืม'
+        status VARCHAR(50) DEFAULT 'พร้อมให้ยืม',
+        version VARCHAR(50) DEFAULT '1.0'
       );
     `;
 
   for (let attempt = 1; attempt <= 10; attempt += 1) {
     try {
       await pool.query(createQuery);
+      await pool.query("ALTER TABLE books ADD COLUMN IF NOT EXISTS version VARCHAR(50) DEFAULT '1.0';");
       console.log('Database initialized.');
       return;
     } catch (err) {
@@ -66,22 +68,22 @@ app.get('/api/books/:isbn', asyncHandler(async (req, res) => {
 }));
 
 app.post('/api/books', asyncHandler(async (req, res) => {
-  const { isbn, title, author, category, year, status } = req.body;
+  const { isbn, title, author, category, year, status, version } = req.body;
   if (!isbn || !title || !author || !category || !year) {
     return res.status(400).json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
   }
   const result = await pool.query(
-    'INSERT INTO books (isbn, title, author, category, year, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-    [isbn, title, author, category, year, status || 'พร้อมให้ยืม']
+    'INSERT INTO books (isbn, title, author, category, year, status, version) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+    [isbn, title, author, category, year, status || 'พร้อมให้ยืม', version || '1.0']
   );
   res.status(201).json(result.rows[0]);
 }));
 
 app.put('/api/books/:isbn', asyncHandler(async (req, res) => {
-  const { title, author, category, year, status } = req.body;
+  const { title, author, category, year, status, version } = req.body;
   const result = await pool.query(
-    'UPDATE books SET title=$1, author=$2, category=$3, year=$4, status=$5 WHERE isbn=$6 RETURNING *',
-    [title, author, category, year, status || 'พร้อมให้ยืม', req.params.isbn]
+    'UPDATE books SET title=$1, author=$2, category=$3, year=$4, status=$5, version=$6 WHERE isbn=$7 RETURNING *',
+    [title, author, category, year, status || 'พร้อมให้ยืม', version || '1.0', req.params.isbn]
   );
   if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
   res.json(result.rows[0]);
