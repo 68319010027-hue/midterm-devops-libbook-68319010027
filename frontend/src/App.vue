@@ -77,7 +77,7 @@ export default {
     const editingIsbn = ref('');
     const message = ref('');
     const form = ref({ isbn: '', title: '', author: '', category: '', year: '', status: 'พร้อมให้ยืม' });
-    const API_URL = `${window.location.protocol}//${window.location.hostname}:3000/api/books`;
+    const API_URL = '/api/books';
 
     const showMessage = (text, timeout = 3000) => {
       message.value = text;
