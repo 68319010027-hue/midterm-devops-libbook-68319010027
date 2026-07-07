@@ -5,13 +5,13 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: yourpassword
       POSTGRES_DB: libbook
-    ports:
-      - "5432:5432"
+    # ❌ ลบ ports: - "5432:5432" ออกไปเลย 
+    # เพื่อให้ฐานข้อมูลคุยกับ backend แค่ภายใน Network ของ Docker เท่านั้น คนนอกแฮกเข้ามาดูไม่ได้
 
   backend:
     image: patcharapon07/libbook-api:v1.0.0
     ports:
-      - "3000:3000"
+      - "3000:3000" # 🔓 อันนี้จำเป็นต้องเปิดไว้ชั่วคราวก่อน เพื่อให้หน้าเว็บ Frontend วิ่งมาจิ้มส่งข้อมูลได้
     environment:
       DB_HOST: db
       DB_USER: postgres
@@ -24,4 +24,4 @@ services:
   frontend:
     image: patcharapon07/libbook-web:v1.0.0
     ports:
-      - "8080:80"
+      - "8080:80" # 🔓 พอร์ตหน้าเว็บหลักที่อาจารย์ต้องกดเข้าดูงาน
