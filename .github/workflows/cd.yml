@@ -23,3 +23,4 @@ jobs:
           echo "Launching Docker containers via stack compose..."
           # คำสั่งสำหรับดึงอิมเมจจาก Docker Hub ล่าสุดและสั่งรันระบบขึ้นมาใช้งานจริง
           docker compose -f docker-compose.prod.yml up -d
+          # force trigger update
